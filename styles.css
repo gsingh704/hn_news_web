@@ -334,9 +334,9 @@ button:hover {
 
 .story-stats {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     background: #f9fafb;
-    border-right: 1px solid #e5e7eb;
+    border-left: 1px solid #e5e7eb;
     flex-shrink: 0;
 }
 
@@ -349,10 +349,12 @@ button:hover {
     color: #6b7280;
     line-height: 1;
     width: 48px;
+    flex: 1;
 }
 
 .stat:first-child {
-    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: none;
 }
 
 .stat-val {

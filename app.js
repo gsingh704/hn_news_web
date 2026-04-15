@@ -407,7 +407,7 @@ async function renderStories() {
         `;
 
         contentBox.append(title, meta, urlBlock);
-        card.append(statsBox, contentBox);
+        card.append(contentBox, statsBox);
         elements.storiesList.appendChild(card);
     });
 
