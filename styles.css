@@ -611,6 +611,9 @@ button:hover {
 [data-theme="dark"] .comment-text {
     color: #d1d5db;
 }
+[data-theme="dark"] .comment-text pre {
+    background: #1f2937;
+}
 
 .comments-scroll-area {
     display: flex;
@@ -637,7 +640,7 @@ button:hover {
     position: relative;
     padding-top: 10px;
     padding-bottom: 2px;
-    padding-left: 20px;
+    padding-left: 12px;
 }
 
 .comment-thread::before {
@@ -645,7 +648,7 @@ button:hover {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 5px;
+    left: 2px;
     width: 2px;
     background-color: #9ca3af;
 }
@@ -657,7 +660,7 @@ button:hover {
 .thread-line {
     position: absolute;
     left: 0;
-    width: 15px;
+    width: 6px;
     top: 0;
     bottom: 0;
     cursor: pointer;
