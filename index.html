@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HN News Web</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        const savedTheme = localStorage.getItem('hn-theme') || 'system';
+        if (savedTheme === 'dark' || (savedTheme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    </script>
+</head>
+<body>
+    <div class="app-shell">
+        <main class="main-grid">
+            <section class="stories-panel">
+                <div class="sidebar-toolbar">
+                    <div class="toolbar-left">
+                        <div class="mode-select-wrapper">
+                            <select id="modeSelect" class="mode-select">
+                                <option value="top">Frontpage (default)</option>
+                                <option value="new">New</option>
+                                <optgroup label="Top">
+                                    <option value="top_past_24h">Top: Past 24h</option>
+                                    <option value="top_past_week">Top: Past Week</option>
+                                    <option value="top_past_month">Top: Past Month</option>
+                                    <option value="top_past_year">Top: Past Year</option>
+                                    <option value="top_all">Top: All Time</option>
+                                </optgroup>
+                                <option value="search" style="display: none">Search Results</option>
+                            </select>
+                        </div>
+                        <div class="pagination">
+                            <button id="prevPageBtn" disabled title="Previous page" class="icon-btn-small">&#x25C0;</button>
+                            <span id="pageIndicator">Page 1</span>
+                            <button id="nextPageBtn" title="Next page" class="icon-btn-small">&#x25B6;</button>
+                        </div>
+                    </div>
+                    <div class="toolbar-group">
+                        <button id="toggleSearchBtn" class="icon-btn" title="Search">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </button>
+                        <button id="themeBtn" class="icon-btn" title="Toggle Theme">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="17.36" y1="17.36" x2="18.78" y2="18.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="17.36" y1="5.64" x2="18.78" y2="4.22"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stories-list-container">
+                    <section class="search-panel" id="searchPanel" style="display: none;">
+                        <div class="search-row">
+                            <input id="searchInput" type="search" placeholder="Search Hacker News stories...">
+                            <button id="searchBtn" title="Search" class="start-search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                        </div>
+                        <div class="filters-row" style="display: none;" id="filtersRow">
+                            <label>
+                                Sort by
+                                <select id="sortSelect">
+                                    <option value="relevance">Relevance</option>
+                                    <option value="date">Date</option>
+                                </select>
+                            </label>
+                            <label>
+                                Time range
+                                <select id="timeSelect">
+                                    <option value="all">All time</option>
+                                    <option value="past_24h">Past 24h</option>
+                                    <option value="past_week">Past Week</option>
+                                    <option value="past_month">Past Month</option>
+                                    <option value="past_year">Past Year</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <div id="storiesList" class="stories-list">
+                        <div class="status-message">Loading stories...</div>
+                    </div>
+                </div>
+            </section>
+            
+            <div id="resizer" class="resizer"></div>
+
+            <section class="comments-panel" id="commentsPanel">
+                <div class="comments-scroll-area">
+                    <div class="section-header comments-header">
+                        <div class="comments-header-content">
+                            <h2 id="commentsTitle">Story comments</h2>
+                            <a id="commentsUrl" class="story-url" target="_blank" rel="noopener"></a>
+                            <div class="comments-header-meta" id="commentsHeaderMeta">
+                                <p id="commentsMeta">Select a story to view comments.</p>
+                                <div id="commentsStats" class="header-stats"></div>
+                            </div>
+                        </div>
+                        <button id="closeCommentsBtn" class="close-btn" title="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    </div>
+                    <div id="commentsContent" class="comments-content"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
