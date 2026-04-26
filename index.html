@@ -12,6 +12,16 @@
         } else {
             document.documentElement.setAttribute('data-theme', 'light');
         }
+
+        // GitHub Pages (and some static hosts) serve 404.html for deep SPA routes.
+        // 404.html redirects here with ?redirect=<original-path+query+hash>.
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect');
+            if (redirect) {
+                history.replaceState(null, '', decodeURIComponent(redirect));
+            }
+        })();
     </script>
 </head>
 <body>
@@ -22,13 +32,13 @@
                     <div class="toolbar-left">
                         <div class="mode-select-wrapper">
                             <select id="modeSelect" class="mode-select">
-                                <option value="top">Frontpage (default)</option>
+                                <option value="front">Home</option>
                                 <option value="new">New</option>
                                 <optgroup label="Top">
-                                    <option value="top_past_24h">Top: Past 24h</option>
-                                    <option value="top_past_week">Top: Past Week</option>
-                                    <option value="top_past_month">Top: Past Month</option>
-                                    <option value="top_past_year">Top: Past Year</option>
+                                    <option value="top_d">Top: Past 24h</option>
+                                    <option value="top_w">Top: Past Week</option>
+                                    <option value="top_m">Top: Past Month</option>
+                                    <option value="top_y">Top: Past Year</option>
                                     <option value="top_all">Top: All Time</option>
                                 </optgroup>
                                 <option value="search" style="display: none">Search Results</option>
@@ -102,6 +112,15 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <div id="commentNav" class="comment-nav" style="display: none;" aria-label="Top-level comment navigation">
+        <button id="prevCommentBtn" class="icon-btn" title="Previous top-level comment" aria-label="Previous top-level comment">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
+        <button id="nextCommentBtn" class="icon-btn" title="Next top-level comment" aria-label="Next top-level comment">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
     </div>
 
     <script src="app.js"></script>

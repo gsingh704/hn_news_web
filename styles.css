@@ -622,6 +622,35 @@ button:hover {
     overflow-y: auto;
 }
 
+.comment-nav {
+    position: fixed;
+    right: calc(30px + env(safe-area-inset-right));
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 10px;
+    z-index: 50;
+}
+
+[data-theme="dark"] .comment-nav {
+    border-color: #333333;
+    background: #1e1e1e;
+}
+
+.comment-nav .icon-btn {
+    border-radius: 8px;
+}
+
+.comment-nav .icon-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .comments-content {
     flex: 1;
 }

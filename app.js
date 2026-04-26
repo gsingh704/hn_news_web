@@ -1,5 +1,5 @@
 const state = {
-    currentType: 'top',
+    currentType: 'front',
     currentPage: 0,
     searchQuery: '',
     sortBy: 'relevance',
@@ -24,13 +24,17 @@ const elements = {
     prevPageBtn: document.getElementById('prevPageBtn'),
     nextPageBtn: document.getElementById('nextPageBtn'),
     commentsPanel: document.getElementById('commentsPanel'),
+    commentsScrollArea: document.querySelector('.comments-scroll-area'),
     commentsTitle: document.getElementById('commentsTitle'),
     commentsUrl: document.getElementById('commentsUrl'),
     commentsMeta: document.getElementById('commentsMeta'),
     commentsStats: document.getElementById('commentsStats'),
     commentsContent: document.getElementById('commentsContent'),
     closeCommentsBtn: document.getElementById('closeCommentsBtn'),
-    filtersRow: document.getElementById('filtersRow')
+    filtersRow: document.getElementById('filtersRow'),
+    commentNav: document.getElementById('commentNav'),
+    prevCommentBtn: document.getElementById('prevCommentBtn'),
+    nextCommentBtn: document.getElementById('nextCommentBtn')
 };
 
 async function init() {
@@ -72,10 +76,84 @@ async function init() {
     elements.nextPageBtn.addEventListener('click', () => changePage(1));
     elements.closeCommentsBtn.addEventListener('click', closeCommentsPanel);
 
+    if (elements.prevCommentBtn && elements.nextCommentBtn) {
+        elements.prevCommentBtn.addEventListener('click', () => scrollToAdjacentTopLevelComment(-1));
+        elements.nextCommentBtn.addEventListener('click', () => scrollToAdjacentTopLevelComment(1));
+    }
+
+    if (elements.commentsScrollArea) {
+        let raf = null;
+        elements.commentsScrollArea.addEventListener('scroll', () => {
+            if (raf) cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(updateCommentNavUi);
+        }, { passive: true });
+    }
+
     parseStateFromUrl();
     applyStateToUi();
     await reloadStories(true);
     updateResponsiveView();
+    updateCommentNavUi();
+}
+
+function getPathSegments(pathname) {
+    const raw = (pathname || '').split('/').filter(Boolean);
+    if (raw.length > 0 && raw[raw.length - 1].toLowerCase() === 'index.html') {
+        raw.pop();
+    }
+    return raw;
+}
+
+function getBaseSegments(pathname) {
+    const segments = getPathSegments(pathname);
+    if (segments.length === 0) return [];
+
+    const last = segments[segments.length - 1];
+    const secondLast = segments[segments.length - 2];
+
+    if (last === 'new' || last === 'search') {
+        return segments.slice(0, -1);
+    }
+
+    if (last === 'top') {
+        return segments.slice(0, -1);
+    }
+
+    if (secondLast === 'top' && ['w', 'm', 'y', 'all'].includes(last)) {
+        return segments.slice(0, -2);
+    }
+
+    return segments;
+}
+
+function parseTypeFromPathname(pathname) {
+    const segments = getPathSegments(pathname);
+    const last = segments[segments.length - 1];
+    const secondLast = segments[segments.length - 2];
+
+    if (last === 'new') return 'new';
+    if (last === 'search') return 'search';
+
+    if (last === 'top') return 'top_d';
+    if (secondLast === 'top') {
+        if (last === 'w') return 'top_w';
+        if (last === 'm') return 'top_m';
+        if (last === 'y') return 'top_y';
+        if (last === 'all') return 'top_all';
+    }
+
+    return 'front';
+}
+
+function buildPathForType(type) {
+    if (type === 'new') return ['new'];
+    if (type === 'search') return ['search'];
+    if (type === 'top_d') return ['top'];
+    if (type === 'top_w') return ['top', 'w'];
+    if (type === 'top_m') return ['top', 'm'];
+    if (type === 'top_y') return ['top', 'y'];
+    if (type === 'top_all') return ['top', 'all'];
+    return [];
 }
 
 const themes = ['system', 'light', 'dark'];
@@ -160,9 +238,11 @@ function setupResizer() {
 
 function parseStateFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    const type = params.get('type');
-    const validTypes = ['top', 'new', 'search', 'top_past_24h', 'top_past_week', 'top_past_month', 'top_past_year', 'top_all'];
-    state.currentType = validTypes.includes(type) ? type : 'top';
+
+    const typeParam = params.get('type');
+    const validTypes = ['front', 'new', 'search', 'top_d', 'top_w', 'top_m', 'top_y', 'top_all'];
+    const typeFromPath = parseTypeFromPathname(window.location.pathname);
+    state.currentType = validTypes.includes(typeParam) ? typeParam : typeFromPath;
 
     const page = parseInt(params.get('page') || '0', 10);
     state.currentPage = Number.isFinite(page) && page >= 0 ? page : 0;
@@ -176,7 +256,7 @@ function parseStateFromUrl() {
     state.activeStoryId = Number.isFinite(storyId) && storyId > 0 ? storyId : null;
 
     if (state.currentType === 'search' && !state.searchQuery) {
-        state.currentType = 'top';
+        state.currentType = 'front';
     }
 }
 
@@ -227,7 +307,6 @@ function updateResponsiveView() {
 
 function syncUrl(replace = false) {
     const params = new URLSearchParams();
-    params.set('type', state.currentType);
     if (state.currentPage > 0) params.set('page', String(state.currentPage));
     if (state.currentType === 'search' && state.searchQuery) {
         params.set('q', state.searchQuery);
@@ -238,7 +317,20 @@ function syncUrl(replace = false) {
         params.set('story', String(state.activeStoryId));
     }
 
-    const url = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    const baseSegments = getBaseSegments(window.location.pathname);
+    const routeSegments = buildPathForType(state.currentType);
+    const fullSegments = baseSegments.concat(routeSegments);
+
+    let path;
+    if (fullSegments.length === 0) {
+        path = '/';
+    } else if (state.currentType === 'front') {
+        path = `/${fullSegments.join('/')}/`;
+    } else {
+        path = `/${fullSegments.join('/')}`;
+    }
+
+    const url = params.toString() ? `${path}?${params.toString()}` : path;
     if (replace) {
         history.replaceState(null, '', url);
     } else {
@@ -310,13 +402,14 @@ async function reloadStories(replaceUrl = false) {
             state.storyIds = await fetchSearchResults(state.searchQuery, state.sortBy, state.timeRange, state.currentPage);
         } else if (state.currentType.startsWith('top_')) {
             const timeRangeMap = {
-                'top_past_24h': 'past_24h',
-                'top_past_week': 'past_week',
-                'top_past_month': 'past_month',
-                'top_past_year': 'past_year',
-                'top_all': 'all'
+                top_d: 'past_24h',
+                top_w: 'past_week',
+                top_m: 'past_month',
+                top_y: 'past_year',
+                top_all: 'all'
             };
-            state.storyIds = await fetchSearchResults('', 'relevance', timeRangeMap[state.currentType], state.currentPage);
+            const range = timeRangeMap[state.currentType] || 'all';
+            state.storyIds = await fetchSearchResults('', 'relevance', range, state.currentPage);
         } else {
             state.storyIds = await fetchStories(state.currentType);
         }
@@ -395,9 +488,16 @@ async function renderStories() {
 
         const fullUrl = story.url || `https://news.ycombinator.com/item?id=${story.id}`;
 
-        const urlBlock = document.createElement('div');
+        const urlBlock = document.createElement('a');
         urlBlock.className = 'story-url';
+        urlBlock.href = fullUrl;
+        urlBlock.target = '_blank';
+        urlBlock.rel = 'noopener';
+        urlBlock.title = fullUrl;
         urlBlock.innerHTML = `&#128279; ${fullUrl}`;
+        urlBlock.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
 
         const meta = document.createElement('div');
         meta.className = 'story-meta';
@@ -455,6 +555,7 @@ function openStory(story, replaceUrl = false) {
     elements.commentsContent.innerHTML = '<div class="status-message">Loading comments...</div>';
     elements.commentsPanel.style.display = 'flex';
     updateResponsiveView();
+    updateCommentNavUi();
     loadComments(story.id);
 
     if (replaceUrl) {
@@ -485,6 +586,7 @@ function closeCommentsPanel() {
     elements.commentsContent.innerHTML = '';
     // elements.storyActions.hidden = true;
     updateResponsiveView();
+    updateCommentNavUi();
     syncUrl();
 }
 
@@ -503,8 +605,11 @@ function buildCommentTreeHtml(kids, depth) {
         const time = child.created_at_i ? formatTime(child.created_at_i) : '';
         const descendantCount = child.children ? countDescendants(child.children) : 0;
 
+        const depthAttr = Number.isFinite(depth) ? depth : 0;
+        const topLevelClass = depthAttr === 0 ? ' top-level-comment' : '';
+
         let html = `
-            <div class="comment-thread" id="thread-${child.id}">
+            <div class="comment-thread${topLevelClass}" data-depth="${depthAttr}" id="thread-${child.id}">
                 <div class="thread-line" onclick="toggleComment(${child.id})"></div>
                 <div class="comment">
                     <div class="comment-meta" onclick="toggleComment(${child.id})" style="cursor: pointer;">
@@ -562,15 +667,100 @@ async function loadComments(id) {
 
         if (!item.children || item.children.length === 0) {
             elements.commentsContent.innerHTML = '<div class="status-message">No comments available.</div>';
+            updateCommentNavUi();
             return;
         }
 
         elements.commentsContent.innerHTML = buildCommentTreeHtml(item.children, 0);
+        updateCommentNavUi();
 
     } catch (error) {
         elements.commentsContent.innerHTML = '<div class="error-message">Unable to load comments.</div>';
         console.error(error);
+        updateCommentNavUi();
     }
+}
+
+function getTopLevelCommentThreads() {
+    if (!elements.commentsContent) return [];
+    return Array.from(elements.commentsContent.querySelectorAll('.comment-thread[data-depth="0"]'));
+}
+
+function getCurrentTopLevelIndex(threads) {
+    if (!elements.commentsScrollArea) return 0;
+    const containerRect = elements.commentsScrollArea.getBoundingClientRect();
+    const topThreshold = containerRect.top + 20;
+
+    let currentIndex = 0;
+    for (let i = 0; i < threads.length; i++) {
+        const rect = threads[i].getBoundingClientRect();
+        if (rect.top <= topThreshold) currentIndex = i;
+        else break;
+    }
+    return currentIndex;
+}
+
+function scrollToAdjacentTopLevelComment(direction) {
+    if (!state.activeStoryId || !elements.commentsScrollArea) return;
+
+    const threads = getTopLevelCommentThreads();
+    if (threads.length === 0) return;
+
+    const containerRect = elements.commentsScrollArea.getBoundingClientRect();
+    const topLine = containerRect.top + 20;
+
+    if (direction > 0) {
+        const next = threads.find((thread) => thread.getBoundingClientRect().top > topLine + 10);
+        if (next) {
+            next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        const currentIndex = getCurrentTopLevelIndex(threads);
+        const targetIndex = Math.min(threads.length - 1, currentIndex + 1);
+        threads[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    let previous = null;
+    for (let i = threads.length - 1; i >= 0; i--) {
+        const rect = threads[i].getBoundingClientRect();
+        if (rect.top < topLine - 10) {
+            previous = threads[i];
+            break;
+        }
+    }
+
+    if (previous) {
+        previous.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    const currentIndex = getCurrentTopLevelIndex(threads);
+    const targetIndex = Math.max(0, currentIndex - 1);
+    threads[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateCommentNavUi() {
+    if (!elements.commentNav || !elements.prevCommentBtn || !elements.nextCommentBtn) return;
+
+    const shouldShow = Boolean(state.activeStoryId);
+    if (!shouldShow) {
+        elements.commentNav.style.display = 'none';
+        return;
+    }
+
+    const threads = getTopLevelCommentThreads();
+    if (threads.length === 0) {
+        elements.commentNav.style.display = 'none';
+        return;
+    }
+
+    elements.commentNav.style.display = 'flex';
+
+    const currentIndex = getCurrentTopLevelIndex(threads);
+    elements.prevCommentBtn.disabled = currentIndex <= 0;
+    elements.nextCommentBtn.disabled = currentIndex >= threads.length - 1;
 }
 
 function countDescendants(children) {
@@ -599,7 +789,7 @@ function formatTime(timestamp) {
 }
 
 async function fetchStories(type) {
-    const endpoint = type === 'top' ? 'topstories.json' : 'newstories.json';
+    const endpoint = (type === 'top' || type === 'front') ? 'topstories.json' : 'newstories.json';
     const response = await fetch(`https://hacker-news.firebaseio.com/v0/${endpoint}`);
     if (!response.ok) throw new Error('Failed to fetch story IDs');
     const data = await response.json();
