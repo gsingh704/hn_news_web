@@ -83,10 +83,21 @@ async function init() {
 
     if (elements.commentsScrollArea) {
         let raf = null;
-        elements.commentsScrollArea.addEventListener('scroll', () => {
+        const debouncedUpdateCommentNavUi = debounce(() => {
             if (raf) cancelAnimationFrame(raf);
             raf = requestAnimationFrame(updateCommentNavUi);
-        }, { passive: true });
+        }, 100); // Debounce by 100ms
+        elements.commentsScrollArea.addEventListener('scroll', debouncedUpdateCommentNavUi, { passive: true });
+    }
+
+    // Utility function for debouncing
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
     }
 
     parseStateFromUrl();
@@ -263,16 +274,11 @@ function parseStateFromUrl() {
 function applyStateToUi() {
     setActiveButton(state.currentType);
     elements.modeSelect.value = state.currentType;
-    if (state.currentType === 'search') {
-        const option = Array.from(elements.modeSelect.options).find(opt => opt.value === 'search');
-        if (option) {
-            option.textContent = state.searchQuery ? `Search: ${state.searchQuery}` : 'Search Results';
-        }
-    }
     
     elements.searchInput.value = state.searchQuery;
     elements.sortSelect.value = state.sortBy;
     elements.timeSelect.value = state.timeRange;
+    // Show/hide search filters and panel based on currentType
     if (elements.filtersRow) {
         elements.filtersRow.style.display = state.currentType === 'search' ? 'grid' : 'none';
         elements.searchPanel.style.display = state.currentType === 'search' ? 'block' : 'none';
@@ -514,6 +520,30 @@ async function renderStories() {
     if (state.activeStoryId) {
         openStoryById(state.activeStoryId, true);
     }
+}
+
+function handleStoryListKeyboardNavigation(event) {
+    const activeElement = document.activeElement;
+    const isStoryCard = activeElement && activeElement.classList.contains('story-card');
+    const storyCards = Array.from(elements.storiesList.querySelectorAll('.story-card'));
+
+    if (storyCards.length === 0) return;
+
+    let currentIndex = -1;
+    if (isStoryCard) {
+        currentIndex = storyCards.indexOf(activeElement);
+    }
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        const nextIndex = Math.min(currentIndex + 1, storyCards.length - 1);
+        storyCards[nextIndex].focus();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        storyCards[prevIndex].focus();
+    }
+    // Could add Home/End/PageUp/PageDown for more comprehensive navigation
 }
 
 function openStory(story, replaceUrl = false) {
