@@ -29,6 +29,7 @@ const elements = {
     commentsUrl: document.getElementById('commentsUrl'),
     commentsMeta: document.getElementById('commentsMeta'),
     commentsStats: document.getElementById('commentsStats'),
+    storyText: document.getElementById('storyText'),
     commentsContent: document.getElementById('commentsContent'),
     closeCommentsBtn: document.getElementById('closeCommentsBtn'),
     filtersRow: document.getElementById('filtersRow'),
@@ -345,8 +346,39 @@ function syncUrl(replace = false) {
 }
 
 function handlePopState() {
+    const prevListKey = [
+        state.currentType,
+        state.currentPage,
+        state.searchQuery,
+        state.sortBy,
+        state.timeRange
+    ].join('|');
+    const prevStoryId = state.activeStoryId;
+
     parseStateFromUrl();
     applyStateToUi();
+
+    const nextListKey = [
+        state.currentType,
+        state.currentPage,
+        state.searchQuery,
+        state.sortBy,
+        state.timeRange
+    ].join('|');
+
+    // Common mobile UX: back closes the comments view (removes `story` param).
+    // If the list itself didn't change, avoid refetching/re-rendering the stories.
+    if (prevListKey === nextListKey) {
+        if (prevStoryId !== state.activeStoryId) {
+            if (state.activeStoryId) {
+                openStoryById(state.activeStoryId, true, { syncUrl: false });
+            } else {
+                closeCommentsPanel({ syncUrl: false });
+            }
+        }
+        return;
+    }
+
     reloadStories(true);
 }
 
@@ -546,7 +578,8 @@ function handleStoryListKeyboardNavigation(event) {
     // Could add Home/End/PageUp/PageDown for more comprehensive navigation
 }
 
-function openStory(story, replaceUrl = false) {
+function openStory(story, replaceUrl = false, options = {}) {
+    const { syncUrl: shouldSyncUrl = true } = options;
     state.activeStory = story;
     state.activeStoryId = story.id;
     
@@ -566,6 +599,16 @@ function openStory(story, replaceUrl = false) {
     elements.commentsUrl.innerHTML = `&#128279; ${fullUrl}`;
     
     elements.commentsMeta.innerHTML = `by <a href="https://news.ycombinator.com/user?id=${story.by}" class="author-link" target="_blank">${story.by || 'unknown'}</a> • ${formatTime(story.time)}`;
+
+    if (elements.storyText) {
+        if (story && story.text) {
+            elements.storyText.innerHTML = sanitizeHtml(story.text);
+            elements.storyText.style.display = 'block';
+        } else {
+            elements.storyText.innerHTML = '';
+            elements.storyText.style.display = 'none';
+        }
+    }
     
     elements.commentsStats.innerHTML = `
         <div class="stat" title="Points">
@@ -588,36 +631,53 @@ function openStory(story, replaceUrl = false) {
     updateCommentNavUi();
     loadComments(story.id);
 
-    if (replaceUrl) {
-        syncUrl(true);
-    } else {
-        syncUrl();
+    if (shouldSyncUrl) {
+        if (replaceUrl) {
+            syncUrl(true);
+        } else {
+            syncUrl();
+        }
     }
 }
 
-async function openStoryById(id, replaceUrl = false) {
+async function openStoryById(id, replaceUrl = false, options = {}) {
     try {
         const story = await fetchItem(id);
         if (!story || story.type !== 'story' || story.deleted || story.dead) {
             elements.commentsContent.innerHTML = '<div class="error-message">Unable to load this story.</div>';
+            if (elements.storyText) {
+                elements.storyText.innerHTML = '';
+                elements.storyText.style.display = 'none';
+            }
             return;
         }
-        openStory(story, replaceUrl);
+        openStory(story, replaceUrl, options);
     } catch (error) {
         elements.commentsContent.innerHTML = '<div class="error-message">Unable to load this story.</div>';
+        if (elements.storyText) {
+            elements.storyText.innerHTML = '';
+            elements.storyText.style.display = 'none';
+        }
         console.error(error);
     }
 }
 
-function closeCommentsPanel() {
+function closeCommentsPanel(options = {}) {
+    const { syncUrl: shouldSyncUrl = true, replaceUrl = false } = options;
     elements.commentsPanel.style.display = 'none';
     state.activeStory = null;
     state.activeStoryId = null;
     elements.commentsContent.innerHTML = '';
+    if (elements.storyText) {
+        elements.storyText.innerHTML = '';
+        elements.storyText.style.display = 'none';
+    }
     // elements.storyActions.hidden = true;
     updateResponsiveView();
     updateCommentNavUi();
-    syncUrl();
+    if (shouldSyncUrl) {
+        syncUrl(replaceUrl);
+    }
 }
 
 function buildCommentTreeHtml(kids, depth) {
