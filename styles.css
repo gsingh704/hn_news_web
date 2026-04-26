@@ -630,8 +630,8 @@ button:hover {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding:2px 5px;
+    /* gap: 0px;
+    padding:2px 5px; */
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     border-radius: 14px;
@@ -644,8 +644,8 @@ button:hover {
 }
 
 .comment-nav .icon-btn {
-    width: 44px;
-    height: 44px;
+    width:72px;
+    height: 48px;
     border-radius: 12px;
     background: transparent;
     border: none;

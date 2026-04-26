@@ -686,15 +686,21 @@ function getTopLevelCommentThreads() {
     return Array.from(elements.commentsContent.querySelectorAll('.comment-thread[data-depth="0"]'));
 }
 
-function getCurrentTopLevelIndex(threads) {
+function getThreadTopInScrollArea(threadEl) {
     if (!elements.commentsScrollArea) return 0;
     const containerRect = elements.commentsScrollArea.getBoundingClientRect();
-    const topThreshold = containerRect.top + 20;
+    const rect = threadEl.getBoundingClientRect();
+    return elements.commentsScrollArea.scrollTop + (rect.top - containerRect.top);
+}
+
+function getCurrentTopLevelIndex(threads) {
+    if (!elements.commentsScrollArea) return 0;
+    const anchor = elements.commentsScrollArea.scrollTop + 20;
 
     let currentIndex = 0;
     for (let i = 0; i < threads.length; i++) {
-        const rect = threads[i].getBoundingClientRect();
-        if (rect.top <= topThreshold) currentIndex = i;
+        const top = getThreadTopInScrollArea(threads[i]);
+        if (top <= anchor) currentIndex = i;
         else break;
     }
     return currentIndex;
@@ -706,39 +712,27 @@ function scrollToAdjacentTopLevelComment(direction) {
     const threads = getTopLevelCommentThreads();
     if (threads.length === 0) return;
 
-    const containerRect = elements.commentsScrollArea.getBoundingClientRect();
-    const topLine = containerRect.top + 20;
+    const anchor = elements.commentsScrollArea.scrollTop + 20;
 
     if (direction > 0) {
-        const next = threads.find((thread) => thread.getBoundingClientRect().top > topLine + 10);
-        if (next) {
-            next.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-        }
-
-        const currentIndex = getCurrentTopLevelIndex(threads);
-        const targetIndex = Math.min(threads.length - 1, currentIndex + 1);
-        threads[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const next = threads.find((thread) => getThreadTopInScrollArea(thread) > anchor + 10);
+        const target = next || threads[Math.min(threads.length - 1, getCurrentTopLevelIndex(threads) + 1)];
+        const targetTop = Math.max(0, Math.round(getThreadTopInScrollArea(target)));
+        elements.commentsScrollArea.scrollTo({ top: targetTop, behavior: 'smooth' });
         return;
     }
 
     let previous = null;
     for (let i = threads.length - 1; i >= 0; i--) {
-        const rect = threads[i].getBoundingClientRect();
-        if (rect.top < topLine - 10) {
+        if (getThreadTopInScrollArea(threads[i]) < anchor - 10) {
             previous = threads[i];
             break;
         }
     }
 
-    if (previous) {
-        previous.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-    }
-
-    const currentIndex = getCurrentTopLevelIndex(threads);
-    const targetIndex = Math.max(0, currentIndex - 1);
-    threads[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = previous || threads[Math.max(0, getCurrentTopLevelIndex(threads) - 1)];
+    const targetTop = Math.max(0, Math.round(getThreadTopInScrollArea(target)));
+    elements.commentsScrollArea.scrollTo({ top: targetTop, behavior: 'smooth' });
 }
 
 function updateCommentNavUi() {
