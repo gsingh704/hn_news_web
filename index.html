@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HN News Web</title>
+    <script>
+        (function () {
+            const path = window.location.pathname || '/';
+            const parts = path.split('/').filter(Boolean);
+
+            // If hosted under a subpath (e.g. GitHub Pages /<repo>/...), set base href accordingly
+            // so assets like styles.css / app.js resolve correctly even on deep links.
+            let baseHref = '/';
+            const isGithubPages = /\.github\.io$/i.test(window.location.hostname || '');
+            if (isGithubPages && parts.length > 0) {
+                baseHref = '/' + parts[0] + '/';
+            }
+
+            const base = document.createElement('base');
+            base.href = baseHref;
+            document.head.appendChild(base);
+        })();
+    </script>
     <link rel="stylesheet" href="styles.css">
     <script>
         const savedTheme = localStorage.getItem('hn-theme') || 'system';
