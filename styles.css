@@ -624,16 +624,17 @@ button:hover {
 
 .comment-nav {
     position: fixed;
-    right: calc(30px + env(safe-area-inset-right));
-    bottom: calc(20px + env(safe-area-inset-bottom));
-    transform: none;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding:2px 5px;
     border: 1px solid #e5e7eb;
     background: #f9fafb;
-    border-radius: 10px;
+    border-radius: 14px;
     z-index: 50;
 }
 
@@ -643,7 +644,17 @@ button:hover {
 }
 
 .comment-nav .icon-btn {
-    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: inherit;
+}
+
+.comment-nav .icon-btn svg {
+    width: 32px;
+    height: 32px;
 }
 
 .comment-nav .icon-btn:disabled {
